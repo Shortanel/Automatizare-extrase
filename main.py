@@ -1,5 +1,7 @@
 import tkinter as tk 
-from tkinter import ttk  
+import os
+import openpyxl 
+import pyodbc as odbc
 
 def enter_data():
     #Artist info entered
@@ -13,13 +15,29 @@ def enter_data():
     monthto = month_to_spin.get()
     yearto = year_to_spin.get()
 
+DRIVER_NAME = 'SQL SERVER'
+SERVER_NAME = 'SERVER-REP'
+DATABASE_NAME = 'CredidamNew'
+
+
+connection_string = f"""
+                    DRIVER={{{DRIVER_NAME}}};
+                    SERVER={SERVER_NAME};
+                    DATABASE={DATABASE_NAME};
+                    Trust_Connection=no; 
+                    uid=valieanache;
+                    pwd=vali2023!;
+"""
+conn = odbc.connect(connection_string)
+print(conn)
+
 window = tk.Tk()
 window.title("Automatizare extrase")
 
 frame = tk.Frame(window)
 frame.pack()
 
-#Artist date frame
+#Artist data frame
 name_data_frame = tk.LabelFrame(frame, text="Date Artist")
 name_data_frame.grid(row= 0, column=0, padx=20, pady=20)
 
@@ -103,5 +121,8 @@ for widget in artist_code_frame.winfo_children():
 button = tk.Button(frame, text="Genereaza", command= enter_data)
 button.grid(row=3, column=0, sticky='news', padx=20, pady=10)
 
+cnxn_str = ("Driver={SQL Server Native Client 11.0};"
+            "Server=")
 
 window.mainloop()
+
