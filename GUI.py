@@ -1,109 +1,140 @@
 import tkinter as tk
 
-class Gui:
+name_data = ['', '', '', '']
+artist_code_data = 0
+date_from_data =['', '']
+date_to_data = ['', '']
 
-    def __init__(self):
-        
-        self.window = tk.Tk()
-        self.window.title("Automatizare extrase")
-        self.window.resizable(False, False)
-        self.window.config(bg="white")
 
-        self.frame = tk.Frame(self.window)
-        self.frame.pack(fill=tk.BOTH, expand=True)
+
+class Mainwindow(tk.Tk):
+
+    def __init__(self, controller, *args, **kwargs):
+        tk.Tk.__init__(self, *args, **kwargs)
+        # Adding a title to the window
+        self.wm_title("Automatizare extrase")
+
+        # creating a frame and assigning it to container
+        container = tk.Frame(self)
+        # specifying the region where the frame is packed in root
+        container.pack()
+
+        labelFrame = tk.LabelFrame(container)
+        labelFrame.grid(row=0, column=0)
+
+
+        # configuring the location of the container using grid
+        container.grid_rowconfigure(0)
+        container.grid_columnconfigure(0)
     
-    def get_lastname(self):
-        return self.last_name_entry.get()
+        sendButton = tk.Button(labelFrame, text= 'Cauta', command= lambda: controller.send_data())
+        sendButton.grid(row=3, column= 0)
+        NameFrame(labelFrame)
+        ArtistCodeFrame(labelFrame)
+        DateFrame(labelFrame)
 
-    def get_firstname(self):
-        return self.first_name_entry.get()
+        print(artist_code_data)
 
-    def get_middlename(self):
-        return self.middle_name_entry.get()
+def NameFrame(frame):
+    labelFrame = tk.LabelFrame(frame, text="Date Personale")
+    labelFrame.grid(row=0, column=0, sticky="news", padx=20, pady=20)
 
-    def get_alias(self):
-        return self.alias_name_entry.get()
+    #Last Name   
+    last_name_label = tk.Label(labelFrame, text="Nume artist")
+    last_name_label.grid(row=0, column=0,padx=30, pady=5)
+    last_name_entry = tk.Entry(labelFrame)
+    last_name_entry.grid(row=1, column=0,padx=30, pady=5)
 
-    def get_artistcode(self):
-        return self.artist_name_entry.get()
+    name_data[0] = last_name_entry
 
-    def get_monthfrom(self):
-        return self.month_from_entry.get()
+    #First Name 
+    first_name_label = tk.Label(labelFrame, text="Prenume artist")
+    first_name_label.grid(row=0, column=1,padx=30, pady=5)
+    first_name_entry = tk.Entry(labelFrame)
+    first_name_entry.grid(row=1, column=1,padx=30, pady=5)
 
-    def get_yearfrom(self):
-        return self.year_from_entry.get()
+    name_data[1] = first_name_entry
 
-    def get_monthto(self):
-        return self.month_to_entry.get()
+    #Middle Name
+    middle_name_label = tk.Label(labelFrame, text="Alt Prenume artist")
+    middle_name_label.grid(row=0, column=2,padx=30, pady=5)
+    middle_name_entry = tk.Entry(labelFrame)
+    middle_name_entry.grid(row=1, column=2,padx=30, pady=5)
+
+    name_data[2] = middle_name_entry
+
+    #Alias
+    alias_label = tk.Label(labelFrame, text="Alias artist")
+    alias_label.grid(row=0, column=3,padx=30, pady=5)
+    alias_entry = tk.Entry(labelFrame)
+    alias_entry.grid(row=1, column=3,padx=30, pady=5)
+
+    name_data[3] = alias_entry
+
+def ArtistCodeFrame(frame):
+    labelFrame = tk.LabelFrame(frame, text="Cod Artist")
+    labelFrame.grid(row=1, column=0, padx=20, pady= 20)
+    artist_code_entry = tk.Entry(labelFrame)
+    artist_code_entry.grid(row=1,column=1, sticky='ew')
+
+    frame.grid_columnconfigure((0,1), weight=1)
+    labelFrame.grid_columnconfigure((0, 2), weight=1)
+
+    data = artist_code_entry
+    return data
+
+def DateFrame(frame):
+    labelFrame = tk.LabelFrame(frame, text="Data")
+    labelFrame.grid(row=2, column=0, sticky="nsew",padx=20, pady= 20)
     
-    def get_yearto(self):
-        return self.year_to_entry.get()
-    
-    def create_name_frame(frame):
-        name_frame = tk.LabelFrame(frame, text="Date Artist")
-        name_frame.grid(row= 0, column=0, padx=20, pady=20)
-    
-    def create_data_frame(frame):
-        data_frame = tk.LabelFrame(frame, text = "Date",)
-        data_frame.grid(row= 1, column=0, sticky= 'news', padx=20, pady=20)
+    #Month from
+    month_from_label = tk.Label(labelFrame, text="Luna")
+    month_from_label.grid(row=0, column=0)
+    month_from_spin = tk.Spinbox(labelFrame, from_=1, to= 12, width= 5)
+    month_from_spin.grid(row=1, column=0,padx=10, pady= 10)
 
-    def create_artcode_frame(frame):
-        artist_code_frame = tk.LabelFrame(frame, text='Cod Artist')
-        artist_code_frame.grid(row=0, column=0,sticky='news', padx=30, pady= 20)
-        artist_code_entry = tk.Entry(artist_code_frame)
-        artist_code_entry.grid(row=0, column=0)
+    date_from_data[0] = month_from_spin
 
-    def create_date_frame(frame):
-        date_frame = tk.LabelFrame(frame, text='Intervalul de timp')
-        date_frame.grid(row=0, column=2,sticky='news', padx=30, pady= 10)
+    #Year from        
+    year_from_label = tk.Label(labelFrame, text="An")
+    year_from_label.grid(row=0, column=1)
+    year_from_spin = tk.Spinbox(labelFrame, from_=1900, to_=3000, width= 5)
+    year_from_spin.grid(row=1, column=1,padx=10, pady= 10)
 
-    def create_lastname_lb(frame,self):
-        last_name_label = tk.Label(frame, text="Nume artist")
-        last_name_label.grid(row=0, column=0)
-        self.last_name_entry = tk.Entry(frame)
-        self.last_name_entry.grid(row=1, column=0)
+    date_from_data[1] = year_from_spin
+
+
+    #Month to
+    month_to_label = tk.Label(labelFrame, text="Luna")
+    month_to_label.grid(row=0, column=2)
+    month_to_spin = tk.Spinbox(labelFrame, from_=1, to= 12, width= 5)
+    month_to_spin.grid(row=1, column=2,padx=10, pady= 10)
+
+    date_to_data[0] = month_to_spin
     
-    def create_firstname_lb(frame,self):
-        first_name_label = tk.Label(frame, text="Nume artist")
-        first_name_label.grid(row=0, column=0)
-        self.first_name_entry = tk.Entry(frame)
-        self.first_name_entry.grid(row=1, column=0)
-    
-    def create_middlename_lb(frame,self):
-        middle_name_label = tk.Label(frame, text="Nume artist")
-        middle_name_label.grid(row=0, column=0)
-        self.middle_name_entry = tk.Entry(frame)
-        self.middle_name_entry.grid(row=1, column=0)
-    
-    def create_middlename_lb(frame,self):
-        middle_name_label = tk.Label(frame, text="Nume artist")
-        middle_name_label.grid(row=0, column=0)
-        self.middle_name_entry = tk.Entry(frame)
-        self.middle_name_entry.grid(row=1, column=0)
-    
-    def create_middlename_lb(frame,self):
-        middle_name_label = tk.Label(frame, text="Nume artist")
-        middle_name_label.grid(row=0, column=0)
-        self.middle_name_entry = tk.Entry(frame)
-        self.middle_name_entry.grid(row=1, column=0)
+    #Year to
+    year_to_label = tk.Label(labelFrame, text="An")
+    year_to_label.grid(row=0, column=3)
+    year_to_spin = tk.Spinbox(labelFrame, from_=1900, to_=3000, width= 5)
+    year_to_spin.grid(row=1, column=3 ,padx=10, pady= 10)
 
-    def create_button(frame,self):
-       button = tk.Button(frame, text="Genereaza", command= self.send_data)
-       button.grid(row=3, column=0, sticky='news', padx=20, pady=10)
+    date_to_data[1] = year_to_spin
 
-    def send_data(self):
-        data = [self.get_lastname,
-                self.get_firstname, 
-                self.get_middlename,
-                self.get_alias,
-                self.get_artistcode,
-                self.get_monthfrom,
-                self.get_yearfrom,
-                self.get_monthto,
-                self.get_yearto]
-        return data 
+def send_data():
+    
+    dict["Name"]["LastName"] = name_data[0]
+    dict["Name"]["FirstName"] = name_data[1]
+    dict["Name"]["MiddleName"] = name_data[2]
+    dict["Name"]["Alias"] = name_data[3]
+    dict["Artist_Code"] = str(artist_code_data)
+    dict["Date"]["Date_From"][0] = date_from_data[0]
+    dict["Date"]["Date_From"][1] = date_from_data[1]
+    dict["Date"]["Date_To"][0] = date_from_data[0]
+    dict["Date"]["Date_To"][1] = date_from_data[1]
 
-    def interface(self):
-        self.create_name_frame(self.frame)
-        self.create_data_frame(self.frame)
-        self.create_artcode_frame(self.frame)
+    print(dict["Artist_Code"])
+
+    return dict
+
+
+
