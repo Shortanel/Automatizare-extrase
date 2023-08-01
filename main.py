@@ -5,14 +5,9 @@ import Excel
 
 def main():
     app = MainWindow()
-
     app.mainloop()
-
-    # After the GUI closes, get the data from the data model in the MainWindow
     data_dict = app.data_model.get_data_dict()
     database = db(data_dict)
-
-
 
     # Search data in the database using the data_dict
     results = database.search_data_in_table()
@@ -22,8 +17,7 @@ def main():
 
     database.disconnect_cursor()
     database.disconnect_connection()
-
-
+    print("finish")
 
 if __name__ == "__main__":
     main()
