@@ -1,45 +1,15 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
-
+from PyQt5.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QLabel, QLineEdit,QPushButton, QFileDialog, 
+    QProgressBar, QDialog, QMessageBox, QHBoxLayout, QRadioButton, QComboBox
+)
+from PyQt5.QtCore import QThread, pyqtSignal
 from enum import Enum
+import os
 
 # Enum to represent the Name Type (Name or Alias)
 class NameType(Enum):
     NAME = 1
     ALIAS = 2
-
-# Main Window class
-class MainWindow(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Processing Data")
-
-        # Create a data model to store user inputs
-        self.data_model = DataModel()
-
-        # Create and pack the NameFrame, ArtistCodeFrame, and TableFrame widgets
-        self.name_frame = NameFrame(self, self.data_model)
-        self.name_frame.pack(pady=10)
-
-        self.artist_code_frame = ArtistCodeFrame(self, self.data_model)
-        self.artist_code_frame.pack(pady=10)
-
-        self.table_frame = TableFrame(self, self.data_model)
-        self.table_frame.pack(pady=10)
-
-        # Create a search button to trigger data saving
-        search_button = tk.Button(self, text='Search', command=self.save_data)
-        search_button.pack(pady=10)
-
-    def save_data(self):
-        # Get the search table and store the data in the DataModel
-        self.name_frame.store_data()
-        self.artist_code_frame.store_data()
-        self.table_frame.store_data()
-
-        # You can access the data_model dictionary here and perform any operations you need
-        data_dict = self.data_model.get_data_dict()
-        print(data_dict)
 
 # DataModel class to store user inputs
 class DataModel:
@@ -67,118 +37,246 @@ class DataModel:
             "Table": self.search_table
         }
 
+# Main Window class
+class MainWindow(QMainWindow):
+    def __init__(self, perform_search, excel_processor):
+        super().__init__()
+        self.setWindowTitle("Processing Data")
+        self.data_model = DataModel()
+        self.perform_search = perform_search
+        self.excel_processor = excel_processor
+
+        # Create a central widget and layout for the main window
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        # Create and add the NameFrame, ArtistCodeFrame, and TableFrame widgets to the main layout
+        self.name_frame = NameFrame(self.data_model)
+        main_layout.addWidget(self.name_frame)
+
+        self.artist_code_frame = ArtistCodeFrame(self.data_model)
+        main_layout.addWidget(self.artist_code_frame)
+
+        self.table_frame = TableFrame(self.data_model)
+        main_layout.addWidget(self.table_frame)
+
+        # Create a search button to trigger data processing
+        search_button = QPushButton("Search", self)
+        search_button.clicked.connect(self.on_search_button_clicked)
+        main_layout.addWidget(search_button)
+
+    def on_search_button_clicked(self):
+        # Get the search table and store the data in the DataModel
+        self.name_frame.store_data()
+        self.artist_code_frame.store_data()
+        self.table_frame.store_data()
+
+        # Call the perform_search function with the data_model as an argument
+        self.perform_search(self.data_model.get_data_dict())
+
+        # Show the progress dialog while performing the search
+        excel_thread = ExcelThread(self.excel_processor)
+        progress_dialog = self.create_progress_dialog(excel_thread)
+        excel_thread.start()
+        progress_dialog.exec_()
+
+        # After processing is done, show the finished window
+        finished_window = self.create_finished_window()
+        finished_window.exec_()
+
+    def create_progress_dialog(self, excel_thread):
+        progress_dialog = QDialog(self)
+        progress_dialog.setWindowTitle("Processing")
+        progress_dialog.setGeometry(100, 100, 400, 150)
+
+        layout = QVBoxLayout(progress_dialog)
+
+        label = QLabel("Processing... Please wait.")
+        layout.addWidget(label)
+
+        progress_bar = QProgressBar()
+        progress_bar.setMaximum(0)
+        progress_bar.setMaximum(100)
+        layout.addWidget(progress_bar)
+
+        excel_thread.progress_signal.connect(progress_bar.setValue)
+        excel_thread.finished.connect(progress_dialog.accept)
+
+        return progress_dialog
+
+    def create_finished_window(self):
+        finished_window = QDialog(self)
+        finished_window.setWindowTitle("Process Completed")
+        finished_window.setGeometry(100, 100, 400, 150)
+
+        layout = QVBoxLayout(finished_window)
+
+        label = QLabel("Processing completed successfully.")
+        layout.addWidget(label)
+
+        open_button = QPushButton("Open File")
+        open_button.clicked.connect(self.on_open_button_clicked)
+        layout.addWidget(open_button)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(finished_window.accept)
+        layout.addWidget(close_button)
+
+        return finished_window
+
+    def on_open_button_clicked(self):
+        options = QFileDialog.Options()
+        file_name, _ = QFileDialog.getOpenFileName(self, "Open Excel File", "", "Excel Files (*.xlsx);;All Files (*)", options=options)
+        if file_name:
+            self.excel_processor.open_excel_file(file_name)
+            
+
 # NameFrame class to handle the Name-related widgets
-class NameFrame(tk.Frame):
-    def __init__(self, parent, data_model):
-        super().__init__(parent)
+class NameFrame(QWidget):
+    def __init__(self, data_model):
+        super().__init__()
         self.data_model = data_model
         self.init_ui()
 
     def init_ui(self):
+        # Create a layout for the NameFrame
+        layout = QVBoxLayout(self)
+
         # Create a variable to store the Name Type (Name or Alias)
-        self.name_type = tk.IntVar(value=NameType.NAME.value)
+        self.name_type = NameType.NAME
 
         # Create radio buttons for Name and Alias options
-        name_radio = tk.Radiobutton(self, text="Name", variable=self.name_type, value=NameType.NAME.value, command=self.on_name_type_selected)
-        name_radio.grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        alias_radio = tk.Radiobutton(self, text="Alias", variable=self.name_type, value=NameType.ALIAS.value, command=self.on_name_type_selected)
-        alias_radio.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.name_radio = QRadioButton("Name", self)
+        self.name_radio.setObjectName("name_radio")  # Set object name for styling
+        self.name_radio.toggled.connect(self.on_name_type_selected)
+
+        self.alias_radio = QRadioButton("Nickname", self)
+        self.alias_radio.setObjectName("alias_radio")  # Set object name for styling
+        self.alias_radio.toggled.connect(self.on_name_type_selected)
 
         # Create the name entry widgets
-        self.first_name_entry = tk.Entry(self)
-        self.first_name_entry.grid(row=0, column=2, padx=10, pady=2, sticky="w")
-        self.last_name_entry = tk.Entry(self)
-        self.last_name_entry.grid(row=1, column=2, padx=10, pady=2, sticky="w")
-        self.alias_entry = tk.Entry(self)
-        self.alias_entry.grid(row=0, column=2, padx=10, pady=2, sticky="w")
+        self.first_name_label = QLabel("First Name:", self)
+        self.first_name_entry = QLineEdit(self)
+
+        self.last_name_label = QLabel("Last Name:", self)
+        self.last_name_entry = QLineEdit(self)
+
+        # Create the "Nickname" entry without a label
+        self.alias_entry = QLineEdit(self)
+
+        # Create a layout for the radio buttons
+        radio_layout = QVBoxLayout()
+        radio_layout.addWidget(self.name_radio)
+        radio_layout.addWidget(self.alias_radio)
+
+        # Create a layout for the "First Name" and "Last Name" entries
+        name_layout = QVBoxLayout()
+        name_layout.addWidget(self.first_name_label)
+        name_layout.addWidget(self.first_name_entry)
+        name_layout.addWidget(self.last_name_label)
+        name_layout.addWidget(self.last_name_entry)
+
+        # Create a layout for the "Nickname" entry
+        alias_layout = QVBoxLayout()
+        alias_layout.addWidget(self.alias_entry)
+
+        # Create a horizontal layout to align the radio buttons and the name entry widgets
+        h_layout = QHBoxLayout()
+        h_layout.addLayout(radio_layout)
+        h_layout.addLayout(name_layout)
+        h_layout.addLayout(alias_layout)
+
+        layout.addLayout(h_layout)
 
         self.show_name_entries()
 
     def on_name_type_selected(self):
-        # Handle the Name/Alias selection
-        selected_type = NameType(self.name_type.get())
-        if selected_type == NameType.NAME:
-            self.show_name_entries()
-        elif selected_type == NameType.ALIAS:
-            self.hide_name_entries()
+        selected_type = self.sender()  # Get the selected radio button
+
+        if selected_type == self.name_radio:
+            # Show the "Given Name" labels and entries, hide the "Nickname" entry
+            self.first_name_label.show()
+            self.first_name_entry.show()
+            self.last_name_label.show()
+            self.last_name_entry.show()
+            self.alias_entry.hide()
+        else:
+            # Show the "Nickname" entry, hide the "Given Name" labels and entries
+            self.first_name_label.hide()
+            self.first_name_entry.hide()
+            self.last_name_label.hide()
+            self.last_name_entry.hide()
+            self.alias_entry.show()
 
     def show_name_entries(self):
-        # Show the Name entry fields
-        self.first_name_entry.grid(row=0, column=2, padx=10, pady=2, sticky="w")
-        self.last_name_entry.grid(row=1, column=2, padx=10, pady=2, sticky="w")
-        self.alias_entry.grid_forget()
-
-    def hide_name_entries(self):
-        # Show the Alias entry field
-        self.first_name_entry.grid_forget()
-        self.last_name_entry.grid_forget()
-        self.alias_entry.grid(row=0, column=2, padx=10, pady=2, sticky="w")
+        # Show the "Given Name" labels and entries by default, hide the "Nickname" entry
+        self.first_name_label.show()
+        self.first_name_entry.show()
+        self.last_name_label.show()
+        self.last_name_entry.show()
+        self.alias_entry.hide()
 
     def store_data(self):
         # Store the Name/Alias data in the data_model
-        self.data_model.name_data['Name Type'] = self.name_type.get()
-        if self.name_type.get() == NameType.NAME.value:
+        self.data_model.name_data['Name Type'] = self.name_type.value
+        if self.name_type == NameType.NAME:
             # Handle empty input for Name entries
-            first_name = self.first_name_entry.get()
-            last_name = self.last_name_entry.get()
+            first_name = self.first_name_entry.text()
+            last_name = self.last_name_entry.text()
             if not first_name or not last_name:
-                tk.messagebox.showerror("Error", "Please enter both First Name and Last Name.")
+                self.show_error_message("Please enter both First Name and Last Name.")
             else:
                 self.data_model.name_data['First Name'] = first_name
                 self.data_model.name_data['Last Name'] = last_name
                 self.data_model.name_data['Alias'] = []
-        elif self.name_type.get() == NameType.ALIAS.value:
+        elif self.name_type == NameType.ALIAS:
             # Handle empty input for Alias entry
-            alias_entry_text = self.alias_entry.get()
+            alias_entry_text = self.alias_entry.text()
             if not alias_entry_text:
-                tk.messagebox.showerror("Error", "Please enter at least one Alias.")
+                self.show_error_message("Please enter at least one Alias.")
             else:
                 aliases = alias_entry_text.split(',')
                 self.data_model.name_data['First Name'] = ''
                 self.data_model.name_data['Last Name'] = ''
                 self.data_model.name_data['Alias'] = [alias.strip() for alias in aliases]
 
+    def show_error_message(self, error_message):
+        QMessageBox.critical(self, "Error", error_message)
+
 # ArtistCodeFrame class to handle the Artist Code entry
-class ArtistCodeFrame(tk.Frame):
-    def __init__(self, parent, data_model):
-        super().__init__(parent)
+class ArtistCodeFrame(QWidget):
+    def __init__(self, data_model):
+        super().__init__()
         self.data_model = data_model
         self.init_ui()
 
     def init_ui(self):
-        # Create a label and an Entry widget for the Artist Code
-        label = tk.Label(self, text="Artist Code")
-        label.pack(side=tk.LEFT, padx=10, pady=5)
+        # Create a layout for the ArtistCodeFrame
+        layout = QHBoxLayout(self)
 
-        # Validate the input to allow only numeric characters
-        vcmd = (self.register(self.validate_artist_code), '%P')
-        self.artist_code_entry = tk.Entry(self, validate='key', validatecommand=vcmd)
-        self.artist_code_entry.pack(side=tk.LEFT, padx=10, pady=5)
+        # Create a label and a QLineEdit for the Artist Code
+        label = QLabel("Artist Code:", self)
+        layout.addWidget(label)
 
-    def validate_artist_code(self, input_text):
-        try:
-            # Check if the input contains only numeric characters
-            if not input_text.isdigit():
-                # Raise a ValueError if the input is not numeric
-                raise ValueError("Invalid input: Artist Code must contain only numeric characters.")
-            return True
-        except ValueError as e:
-            # Show an error message to the user in case of invalid input
-            tk.messagebox.showerror("Error", str(e))
-            return False
+        self.artist_code_entry = QLineEdit(self)
+        layout.addWidget(self.artist_code_entry)
 
     def store_data(self):
         # Store the artist code in the data_model
-        self.data_model.artist_code_data = self.artist_code_entry.get()
+        self.data_model.artist_code_data = self.artist_code_entry.text()
 
 # TableFrame class to handle the search table selection
-class TableFrame(tk.Frame):
-    def __init__(self, parent, data_model):
-        super().__init__(parent)
+class TableFrame(QWidget):
+    def __init__(self, data_model):
+        super().__init__()
         self.data_model = data_model
         self.init_ui()
 
     def init_ui(self):
+        # Create a layout for the TableFrame
+        layout = QVBoxLayout(self)
+
         # Options for the Combobox
         table_options = [
             "Cautari_C_iun2023",
@@ -188,28 +286,39 @@ class TableFrame(tk.Frame):
         ]
 
         # Create a label for the Combobox
-        label = tk.Label(self, text="Select Table:", anchor=tk.W)
-        label.pack(side=tk.LEFT, padx=10, pady=5)
+        label = QLabel("Select Table:", self)
 
         # Create a Combobox to select the table
-        self.table_combobox = ttk.Combobox(self, values=table_options)
-        self.table_combobox.pack(side=tk.LEFT, padx=10, pady=5)
-        self.table_combobox.set(table_options[0])  # Set the first option as default
+        self.table_combobox = QComboBox(self)
+        self.table_combobox.setEditable(True)  # Set the Combobox to be editable
+        self.table_combobox.addItems(table_options)
+        self.table_combobox.currentIndexChanged.connect(self.on_table_selected)
 
-        # Bind the FocusOut event to update the data model when the combobox loses focus
-        self.table_combobox.bind("<FocusOut>", self.on_table_selected)
+        # Add the label and Combobox to the layout
+        layout.addWidget(label)
+        layout.addWidget(self.table_combobox)
 
-    def on_table_selected(self, event):
+    def on_table_selected(self, index):
         # Update the data model with the selected table
-        selected_table = self.table_combobox.get()
+        selected_table = self.table_combobox.currentText()
         self.data_model.search_table = selected_table
         print(f"Selected table: {selected_table}")
 
     def store_data(self):
         # Save the changes made to the selected option
-        selected_table = self.table_combobox.get()
+        selected_table = self.table_combobox.currentText()
         self.data_model.search_table = selected_table
 
-if __name__ == "__main__":
-    app = MainWindow()
-    app.mainloop()
+class ExcelThread(QThread):
+    progress_signal = pyqtSignal(int)  # Custom signal to send progress updates
+
+    def __init__(self, excel_module):
+        super().__init__()
+        self.excel_module = excel_module
+
+    def run(self):
+        try:
+            # Perform the search and Excel processing in the thread
+            self.excel_module.perform_search(self.data_model.get_data_dict(), self.progress_signal)
+        except Exception as e:
+            print(f"An error occurred in the Excel thread: {str(e)}")
